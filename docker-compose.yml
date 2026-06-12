@@ -1,0 +1,42 @@
+# One-command local/prod-like stack: Mongo + the heartbeat server + the static
+# client. Run with: SESSION_SECRET=$(openssl rand -base64 48) docker compose up --build
+#
+# IMPORTANT: PULSE runs ONE authoritative game loop. Scale the server to exactly
+# one instance (replicas: 1). To fan out Socket.io across more instances you'd
+# add the @socket.io/redis-adapter and keep the loop on a single leader — see the
+# README "Scaling" note.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      MONGO_URI: mongodb://mongo:27017/pulse
+      CLIENT_ORIGIN: http://localhost:8080
+      SESSION_SECRET: ${SESSION_SECRET:-pulse-dev-secret-change-me}
+      MAX_VOTES_PER_IP: 5
+    depends_on:
+      - mongo
+    ports:
+      - "4000:4000"
+
+  client:
+    build:
+      context: ./client
+      args:
+        VITE_SERVER_URL: http://localhost:4000
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+
+volumes:
+  mongo-data:
