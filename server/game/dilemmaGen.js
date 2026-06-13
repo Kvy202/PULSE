@@ -61,7 +61,8 @@ const BANKS = {
   // Adjectives that color an entity in a choice — the big variety multiplier.
   entityAdj: [
     'doomed', 'fading', 'restless', 'forgotten', 'distant', 'sleeping', 'rising',
-    'dying', 'radiant', 'trembling', 'defiant', 'last',
+    'dying', 'radiant', 'trembling', 'defiant', 'last', 'sacred', 'drowning',
+    'gilded', 'nameless', 'weary', 'unbroken', 'flickering', 'wandering',
   ],
   resource: ['serum', 'grain', 'power', 'water', 'light', 'fuel', 'medicine', 'signal'],
   // Relic names come from adjective × noun — 22 × 22 = 484 base names.
@@ -117,6 +118,20 @@ function pickTwoPhrases(pool) {
   return [a, b];
 }
 
+// "the {virtue} of the {entity}" — a second multiplier (|virtue| × |entities|)
+// that reads as a poetic bond: "the mercy of the elders", "the doubt of the whales".
+function virtueOf() {
+  const bare = rand(ENTITIES()).replace(/^the /, '');
+  return `the ${rand(BANKS.virtue)} of the ${bare}`;
+}
+function pickTwoVirtueOf() {
+  const a = virtueOf();
+  let b = virtueOf();
+  let guard = 0;
+  while (b === a && guard++ < 12) b = virtueOf();
+  return [a, b];
+}
+
 const relic = () => ({
   name: `The ${rand(BANKS.relicAdj)} ${rand(BANKS.relicNoun)}`,
   icon: rand(BANKS.relicIcon),
@@ -141,11 +156,11 @@ const THEMES = {
       };
     },
     () => {
-      const p = rand(BANKS.place);
+      const p = phrase(BANKS.place);
       return {
         prompt: `${cap(p)} is failing. Do you —`,
-        optionA: `evacuate ${p}`,
-        optionB: `fortify ${p}`,
+        optionA: 'evacuate it (save the people)',
+        optionB: 'fortify it (save the place)',
         consequence: {
           A: { type: 'survival', amount: randInt(1, 3), label: `${cap(p)} is emptied, but its people live.` },
           B: { type: 'survival', amount: randInt(2, 5), label: `${cap(p)} stands against the dark.` },
@@ -154,7 +169,7 @@ const THEMES = {
     },
     () => {
       const r = rand(BANKS.resource);
-      const [a, b] = pickTwo('people');
+      const [a, b] = pickTwoPhrases([...BANKS.people, ...BANKS.creature]);
       return {
         prompt: `The last ${r} can go to only one. Give it to —`,
         optionA: cap(a),
@@ -175,7 +190,7 @@ const THEMES = {
       },
     }),
     () => {
-      const c = rand(BANKS.creature);
+      const c = phrase(BANKS.creature);
       return {
         prompt: `A dying plague jumps to ${c}. Burn the bloom, or let it spread to spare them?`,
         optionA: 'burn the bloom',
@@ -199,14 +214,14 @@ const THEMES = {
       };
     },
     () => {
-      const [v1, v2] = pickTwo('virtue');
+      const [v1, v2] = pickTwoVirtueOf();
       return {
-        prompt: 'One idea must be struck from the world forever. Erase —',
+        prompt: 'One bond must be struck from the world forever. Erase —',
         optionA: cap(v1),
         optionB: cap(v2),
         consequence: {
-          A: { type: 'artifact', name: `The Erasure of ${cap(v1)}`, icon: '☓' },
-          B: { type: 'artifact', name: `The Erasure of ${cap(v2)}`, icon: '☓' },
+          A: { type: 'artifact', name: `Erased: ${cap(v1)}`, icon: '☓' },
+          B: { type: 'artifact', name: `Erased: ${cap(v2)}`, icon: '☓' },
         },
       };
     },
@@ -244,7 +259,7 @@ const THEMES = {
       },
     }),
     () => {
-      const p = rand(BANKS.people);
+      const p = phrase(BANKS.people);
       return {
         prompt: `${cap(p)} claim the verdicts are rigged. Do you —`,
         optionA: 'trust the Pulse',
@@ -256,13 +271,13 @@ const THEMES = {
       };
     },
     () => {
-      const v = rand(BANKS.virtue);
+      const bond = virtueOf();
       return {
-        prompt: `Swear the world to ${v}, or keep your options open?`,
-        optionA: `swear to ${v}`,
+        prompt: `Swear the world to ${bond}, or keep your options open?`,
+        optionA: `swear to ${bond}`,
         optionB: 'stay free',
         consequence: {
-          A: { type: 'artifact', name: `An Oath of ${cap(v)}`, icon: '♁' },
+          A: { type: 'artifact', name: `An Oath: ${cap(bond)}`, icon: '♁' },
           B: { type: 'message', kind: 'truth' },
         },
       };
@@ -298,10 +313,10 @@ const THEMES = {
       },
     }),
     () => {
-      const p = rand(BANKS.place);
+      const p = phrase(BANKS.place);
       return {
         prompt: `Freeze ${p} exactly as it is, or let it decay into memory?`,
-        optionA: `freeze ${p}`,
+        optionA: 'freeze it',
         optionB: 'let it decay',
         consequence: {
           A: { type: 'artifact', name: 'A Frozen Moment', icon: '❄' },
@@ -331,7 +346,7 @@ const THEMES = {
       },
     }),
     () => {
-      const p = rand(BANKS.people);
+      const p = phrase(BANKS.people);
       return {
         prompt: `Grant ${p} dominion over the next verdict, or scatter the power?`,
         optionA: `crown ${p}`,
@@ -420,13 +435,18 @@ export function approxVariety() {
   const n = BANKS;
   const p2 = (a) => a * (a - 1); // ordered distinct pairs
   const entities = n.people.length + n.creature.length + n.place.length;
-  const savePhrases = n.entityAdj.length * entities; // "the {adj} {entity}"
-  const silencePhrases = n.entityAdj.length * (n.people.length + n.creature.length);
-  const survival = p2(savePhrases) + n.place.length + n.resource.length * p2(n.people.length) + 1 + n.creature.length;
-  const identity = p2(n.color.length) + p2(n.virtue.length) + p2(silencePhrases) + 1;
-  const trust = 1 + n.people.length + n.virtue.length + 1;
-  const time = 1 + 1 + n.place.length;
+  const phraseAll = n.entityAdj.length * entities; // "the {adj} {entity}"
+  const phrasePC = n.entityAdj.length * (n.people.length + n.creature.length);
+  const phrasePlace = n.entityAdj.length * n.place.length;
+  const phrasePeople = n.entityAdj.length * n.people.length;
+  const phraseCreature = n.entityAdj.length * n.creature.length;
+  const bond = n.virtue.length * entities; // "the {virtue} of the {entity}"
   const relics = n.relicAdj.length * n.relicNoun.length;
-  const power = 1 + 1 + n.people.length + 1 + relics;
+
+  const survival = p2(phraseAll) + phrasePlace + n.resource.length * p2(phrasePC) + 1 + phraseCreature;
+  const identity = p2(n.color.length) + p2(bond) + p2(phrasePC) + 1;
+  const trust = 1 + phrasePeople + bond + 1;
+  const time = 1 + 1 + phrasePlace;
+  const power = 1 + 1 + phrasePeople + 1 + relics;
   return survival + identity + trust + time + power;
 }

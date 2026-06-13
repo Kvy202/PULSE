@@ -26,7 +26,7 @@ test('the engine produces broad variety (combinatorial, not a short loop)', () =
     seen.add(`${d.prompt}|${d.optionA}|${d.optionB}`);
   }
   // Far more than a hand-written list; thousands of distinct dilemmas.
-  assert.ok(seen.size > 1800, `expected >1800 distinct dilemmas, got ${seen.size}`);
+  assert.ok(seen.size > 3000, `expected >3000 distinct dilemmas, got ${seen.size}`);
 });
 
 test('approxVariety reports a large distinct-dilemma ceiling', () => {
