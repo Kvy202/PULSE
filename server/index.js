@@ -65,15 +65,21 @@ async function main() {
   loop.init(io);
   registerSockets(io);
 
-  server.listen(config.port, () => {
+  // If the port is taken, exit instead of running a phantom game loop against
+  // the shared DB (which would leapfrog round numbers with the real instance).
+  server.on('error', (err) => {
+    console.error('[server] listen failed — exiting', err.code || err);
+    process.exit(1);
+  });
+
+  // Start the heartbeat ONLY after we've actually bound the port.
+  server.listen(config.port, async () => {
     console.log(`[server] PULSE listening on http://localhost:${config.port}`);
     if (config.sessionSecret === 'pulse-dev-secret-change-me') {
       console.warn('[server] WARNING: using the default SESSION_SECRET — set one in production.');
     }
+    await loop.bootstrap();
   });
-
-  // Start the heartbeat once everything is wired.
-  await loop.bootstrap();
 }
 
 // Safety nets: log stray async failures instead of letting them destabilize the
