@@ -14,6 +14,7 @@ import {
 import { personalityShift, eraFor } from './personality.js';
 import { applyConsequence } from './consequences.js';
 import { TUNING } from './tuning.js';
+import * as bots from './bots.js';
 
 // The heartbeat. A single in-process loop is the authoritative clock: it owns
 // the active round, the live tally, and when the verdict falls. Clients only
@@ -40,7 +41,20 @@ const state = {
   votesByIp: new Map(), // per-IP vote count THIS round (anti-ballot-stuffing)
   mutedUntil: new Map(), // sessionId -> round number through which it's silenced
   metrics: { votesAllTime: 0, roundsAllTime: 0, mutesAllTime: 0 }, // since boot
+  realPresence: 0, // connected human sockets
+  botPresence: 0, // ambient bots "awake" this round
 };
+
+// Presence = humans + ambient bots. Broadcast whenever either changes.
+function broadcastPresence() {
+  io?.emit('presence', { count: state.realPresence + state.botPresence });
+}
+
+// Called by the socket layer as humans connect/disconnect.
+export function incPresence(delta) {
+  state.realPresence = Math.max(0, state.realPresence + delta);
+  broadcastPresence();
+}
 
 // Cache a soul's faction, evicting the oldest entry if the roster grows too
 // large, so a long-lived server never leaks memory on unique sessions.
@@ -115,6 +129,9 @@ export function getMetrics() {
     currentRound: state.round?.roundNumber ?? 0,
     votesThisRound: state.tally.A + state.tally.B,
     mutedSouls: state.mutedUntil.size,
+    presence: state.realPresence + state.botPresence,
+    humans: state.realPresence,
+    bots: state.botPresence,
   };
 }
 
@@ -206,6 +223,7 @@ export async function bootstrap() {
     { _id: 'global', palette: { $exists: false } },
     { $set: { palette: { red: true, green: true, blue: true }, ageBase: 0, lastMessage: null } }
   );
+  bots.initBots();
   await startRound();
 }
 
@@ -248,6 +266,15 @@ async function startRound() {
 
   io?.emit('round:start', getActiveRoundPayload());
   io?.emit('faction:update', getFactionPayload());
+
+  // Ambient bots keep the room alive — they vote through the same path as humans,
+  // staggered across the window. Their count breathes the presence counter.
+  state.botPresence = bots.scheduleRound({
+    voteMs: config.voteMs,
+    getTally: () => ({ ...state.tally }),
+    castVote: (id, choice) => castVote(id, choice, null).catch(() => {}),
+  });
+  broadcastPresence();
 
   scheduleNextPhase(resolveRound, config.voteMs);
 }
@@ -294,6 +321,7 @@ export async function castVote(sessionId, choice, ip) {
 
 async function resolveRound() {
   if (!state.round) return;
+  bots.cancelRound(); // no stray bot votes once the window closes
 
   const { A, B } = state.tally;
   const result = A >= B ? 'A' : 'B'; // ties resolve to A (documented)

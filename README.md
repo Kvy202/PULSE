@@ -51,6 +51,12 @@ by the next visitor:
 **~13.7 million** distinct dilemmas from curated templates × word banks, each with
 coherent, parameterized consequences, plus a recent-repeat guard.
 
+**Never a dead room** — ambient **bots** keep the experiment alive when few or no
+humans are around. They vote through the same path as real souls, so they
+populate the World-Brain, the factions, the alignment distribution, and even make
+a real visitor's rarity meaningful. Their count breathes randomly, and because
+the world keeps evolving while you're away, it powers the "you weren't here" twist.
+
 **Hardened for real use** — signed-session vote integrity, per-IP caps, a
 self-healing loop, bounded memory, batched broadcasts, unit tests, CI, a Docker
 stack, and a live metrics endpoint.
@@ -141,6 +147,23 @@ relics), multiplied by an **adjective × entity** layer and a **"{virtue} of the
 - Theme selection is weighted by the collective's personality — a doubting crowd
   faces trust dilemmas, a chaotic one faces destructive ones
 - An **LLM seam** (`LLM_API_KEY`) is ready if you ever want a model to author them
+
+## Ambient bots
+
+So the room is never empty, [server/game/bots.js](server/game/bots.js) runs a
+pool of ambient bots that vote every round — among themselves when no humans are
+present, and alongside humans when they arrive. They cast through the same
+`castVote` path as real souls, so they automatically show up in the live tally
+and World-Brain pulses, the faction tug-of-war, the alignment distribution, and
+the rarity figures. The number "awake" random-walks between `BOTS_MIN` and
+`BOTS_MAX` so the presence counter breathes, and only ~75% vote in a given round.
+
+Bot **archetypes** map onto the alignment classifier, so the crowd self-sorts
+into real tribes: *herd/guardian* follow the leader (→ Guardian), *contrarian/
+martyr* back the underdog (→ Contrarian/Martyr), *gambler* flips a coin (→
+Gambler). Staggered voting makes the tally evolve organically — followers pile on
+a leader while contrarians push back, producing a genuine tug-of-war. Disable
+with `BOTS_ENABLED=false`.
 
 ## Vote integrity
 

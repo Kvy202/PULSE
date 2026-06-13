@@ -5,6 +5,7 @@ import {
   getWorldState,
   getRevealPayload,
   helloSoul,
+  incPresence,
 } from '../game/loop.js';
 
 // A tiny fixed-window rate limiter: at most `max` events per `windowMs` per
@@ -27,11 +28,8 @@ function makeLimiter(max, windowMs) {
 // late joiners to the current round (or the verdict, mid-reveal) so everyone
 // sees the same heartbeat. Identity is the server-signed id on socket.data.
 export function registerSockets(io) {
-  let presence = 0;
-
   io.on('connection', async (socket) => {
-    presence += 1;
-    io.emit('presence', { count: presence });
+    incPresence(1); // presence (humans + bots) is owned by the game loop
 
     const voteLimit = makeLimiter(10, 5000);
     const helloLimit = makeLimiter(5, 5000);
@@ -74,8 +72,7 @@ export function registerSockets(io) {
     });
 
     socket.on('disconnect', () => {
-      presence = Math.max(0, presence - 1);
-      io.emit('presence', { count: presence });
+      incPresence(-1);
     });
   });
 }

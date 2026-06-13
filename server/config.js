@@ -20,6 +20,16 @@ export const config = {
   // How many rounds a "muted" soul is silenced for (the power/mute dilemma).
   muteRounds: Number(process.env.MUTE_ROUNDS) || 1,
 
+  // Bots keep the world alive when few/no humans are around. They vote through
+  // the same path as real souls, so they populate the brain, factions, and
+  // alignments. "Souls awake" breathes randomly between min and max.
+  botsEnabled: process.env.BOTS_ENABLED !== 'false',
+  botPoolSize: Number(process.env.BOT_POOL) || 60, // distinct personas available
+  botPresenceMin: Number(process.env.BOTS_MIN) || 4, // fewest bots "awake"
+  botPresenceMax: Number(process.env.BOTS_MAX) || 22, // most bots "awake"
+  botChurn: Number(process.env.BOTS_CHURN) || 3, // how much presence drifts per round
+  botVoteProb: 0.75, // chance an awake bot actually votes in a round
+
   // Round cadence (fast mode): 20s to vote, 5s to reveal the verdict.
   voteMs: 20_000,
   revealMs: 5_000,
