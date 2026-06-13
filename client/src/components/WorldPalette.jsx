@@ -1,7 +1,9 @@
 // Renders hidden SVG color-matrix filters and applies the matching one to the
 // whole app when the world has lost a color channel (a `tint` consequence).
-// Each removed channel is zeroed out, draining that color from everything on
-// screen — permanent and inherited by every visitor.
+// A lost channel is DESATURATED — replaced by the average of the other two —
+// so its hue drains from everything on screen while luminance is preserved.
+// (Zeroing channels instead would collapse the dark UI to black once two were
+// gone; desaturation keeps the dashboard legible no matter how many are lost.)
 
 // Which filter to apply for the current palette (the set of lost channels).
 export function paletteFilterId(palette) {
@@ -24,11 +26,13 @@ export default function WorldPalette() {
     <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
       <defs>
         {combos.map((lost) => {
-          // Compose a matrix that zeroes every lost channel.
+          // Compose a matrix that DRAINS each lost channel's hue by replacing it
+          // with the average of the other two — luminance is kept, so the UI
+          // never goes black even when several channels are gone.
           const rows = { r: [1, 0, 0, 0, 0], g: [0, 1, 0, 0, 0], b: [0, 0, 1, 0, 0], a: [0, 0, 0, 1, 0] };
-          if (lost.includes('red')) rows.r = [0, 0, 0, 0, 0];
-          if (lost.includes('green')) rows.g = [0, 0, 0, 0, 0];
-          if (lost.includes('blue')) rows.b = [0, 0, 0, 0, 0];
+          if (lost.includes('red')) rows.r = [0, 0.5, 0.5, 0, 0];
+          if (lost.includes('green')) rows.g = [0.5, 0, 0.5, 0, 0];
+          if (lost.includes('blue')) rows.b = [0.5, 0.5, 0, 0, 0];
           const values = [...rows.r, ...rows.g, ...rows.b, ...rows.a].join(' ');
           return (
             <filter key={lost.join('-')} id={`pulse-kill-${lost.join('-')}`}>
