@@ -3,14 +3,16 @@
 # 127.0.0.1 (which would mean "inside this container"). One Mongo container,
 # created once, serves both PULSE and MIRROR (different databases).
 #
+# Secrets come from a PERSISTENT, git-ignored, root-only env file on the host:
+#   /etc/tradyai/pulse.env   (must contain SESSION_SECRET=...)
+# deploy/deploy.sh refuses to run if it's missing and drops an example for you.
+#
 # First-time host setup (run once, NOT per app):
 #   docker network create webnet
 #   docker run -d --name mongo --network webnet \
 #     -v mongo-data:/data/db --restart unless-stopped mongo:7
 #
-# Then, from the repo root:
-#   SESSION_SECRET=$(openssl rand -base64 48) \
-#     docker compose -f deploy/docker-compose.prod.yml up -d --build
+# Then, from the repo root:  ./deploy/deploy.sh
 #
 # Run exactly ONE instance — these apps own a single authoritative game loop.
 
@@ -20,12 +22,15 @@ services:
   server:
     build:
       context: ../server
+    # Persistent secrets (SESSION_SECRET, and any local overrides) live here.
+    env_file:
+      - /etc/tradyai/pulse.env
+    # Non-secret, deployment-constant settings.
     environment:
       NODE_ENV: production
       PORT: 4000
       MONGO_URI: mongodb://mongo:27017/pulse # service name on webnet, not 127.0.0.1
       CLIENT_ORIGIN: https://pulse.tradyai.live
-      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in the environment}
       MAX_VOTES_PER_IP: 5
     # Publish to localhost only; the host nginx (and the ALB) sit in front.
     ports:
