@@ -1,0 +1,39 @@
+# Production compose for ONE EC2 box. The Node server runs in a container and
+# reaches Mongo by its service name on a SHARED external Docker network — never
+# 127.0.0.1 (which would mean "inside this container"). One Mongo container,
+# created once, serves both PULSE and MIRROR (different databases).
+#
+# First-time host setup (run once, NOT per app):
+#   docker network create webnet
+#   docker run -d --name mongo --network webnet \
+#     -v mongo-data:/data/db --restart unless-stopped mongo:7
+#
+# Then, from the repo root:
+#   SESSION_SECRET=$(openssl rand -base64 48) \
+#     docker compose -f deploy/docker-compose.prod.yml up -d --build
+#
+# Run exactly ONE instance — these apps own a single authoritative game loop.
+
+name: pulse
+
+services:
+  server:
+    build:
+      context: ../server
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      MONGO_URI: mongodb://mongo:27017/pulse # service name on webnet, not 127.0.0.1
+      CLIENT_ORIGIN: https://pulse.tradyai.live
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in the environment}
+      MAX_VOTES_PER_IP: 5
+    # Publish to localhost only; the host nginx (and the ALB) sit in front.
+    ports:
+      - "127.0.0.1:4000:4000"
+    restart: unless-stopped
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    external: true

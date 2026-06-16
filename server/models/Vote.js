@@ -13,4 +13,9 @@ const voteSchema = new mongoose.Schema({
 
 voteSchema.index({ roundId: 1, sessionId: 1 }, { unique: true });
 
+// Votes are only needed until their round resolves (profiling happens then), so
+// expire them after 7 days. Without this the collection grows forever under the
+// 24/7 bot traffic. Adjust the window by recreating the index.
+voteSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 7 });
+
 export const Vote = mongoose.model('Vote', voteSchema);

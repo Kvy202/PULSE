@@ -40,6 +40,7 @@ async function main() {
     res.cookie(SESSION_COOKIE, signSession(id), {
       httpOnly: true,
       sameSite: 'lax',
+      secure: config.production, // Secure only in prod (so http://localhost still works)
       maxAge: 1000 * 60 * 60 * 24 * 365,
     });
     res.json({ sessionId: id });
