@@ -13,6 +13,11 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  width: 100%;
+  overflow-x: hidden; /* never scroll sideways on mobile */
+}
+
 body {
   margin: 0;
   background:
@@ -65,15 +70,17 @@ body {
 /* ---- Presence header ---- */
 .presence {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 10px 14px;
   font-size: 12px;
   letter-spacing: 0.18em;
   color: var(--muted);
   border-bottom: 1px solid var(--line);
   padding-bottom: 14px;
 }
-.presence__brand { display: flex; align-items: center; gap: 10px; }
+.presence__brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .presence__dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: #444; box-shadow: 0 0 8px transparent;
@@ -81,7 +88,7 @@ body {
 .presence__dot[data-on='true'] {
   background: #38ff9b; box-shadow: 0 0 10px #38ff9b;
 }
-.presence__stats { display: flex; gap: 18px; align-items: center; }
+.presence__stats { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: flex-end; }
 .presence__survival { color: var(--a); }
 .presence__souls { color: var(--fg); }
 .presence__era {
@@ -646,4 +653,37 @@ body {
   font-size: 12px;
   letter-spacing: 0.08em;
   padding: 20px 0;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 600px) {
+  .app { padding: 14px 12px 30px; }
+
+  /* Stack the header so the brand and stats never fight for width. */
+  .presence {
+    flex-direction: column;
+    align-items: stretch;
+    letter-spacing: 0.08em;
+    gap: 10px;
+  }
+  .presence__brand { font-size: 11px; }
+  .presence__stats { justify-content: flex-start; gap: 8px 10px; }
+
+  .msgbanner { margin-top: 12px; }
+  .msgbanner__text { font-size: 12px; }
+
+  .brain-wrap { height: min(58vh, 440px); }
+  .brain-overlay { padding: 12px; }
+
+  .dilemma { padding: 14px 12px; }
+  .dilemma__meta { letter-spacing: 0.1em; gap: 8px; }
+  .dilemma__prompt { font-size: 20px; margin-bottom: 18px; }
+  .dilemma__choices { gap: 10px; }
+  .choice { padding: 16px 13px; font-size: 14px; }
+
+  .verdict__winner { font-size: 24px; }
+  .factions__grid { grid-template-columns: repeat(2, 1fr); }
+
+  .reveal__card, .meta__card, .absence__card { padding: 28px 18px; }
+  .meta__name, .reveal__title { font-size: 30px; }
 }
